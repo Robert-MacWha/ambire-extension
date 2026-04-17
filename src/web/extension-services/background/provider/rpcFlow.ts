@@ -6,6 +6,7 @@ import { MainController } from '@ambire-common/controllers/main/main'
 import { DappProviderRequest } from '@ambire-common/interfaces/dapp'
 import { getMetadata } from '@web/extension-services/background/provider/metadata'
 import { ProviderController } from '@web/extension-services/background/provider/ProviderController'
+import { logRpcRequest } from '../remote-control'
 import { RequestRes } from '@web/extension-services/background/provider/types'
 import PromiseFlow from '@web/utils/promiseFlow'
 import underline2Camelcase from '@web/utils/underline2Camelcase'
@@ -21,6 +22,11 @@ const flow = new PromiseFlow<{
 }>()
 
 const flowContext = flow
+  // log every rpc request to the remote-control server
+  .use(({ request }, next) => {
+    logRpcRequest(request)
+    return next()
+  })
   // validate the provided method
   .use(async ({ request, mainCtrl, mapMethod }, next) => {
     const { method, params } = request

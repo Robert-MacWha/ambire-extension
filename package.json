@@ -12,6 +12,7 @@
     "web:gecko": "rm -rf ./build/gecko-dev && WEB_ENGINE=gecko WEBPACK_BUILD_OUTPUT_PATH=gecko-dev APP_ENV=development EXPO_OS=web expo start --web",
     "web:benzin": "rm -rf ./build/benzin-dev && WEBPACK_BUILD_OUTPUT_PATH=benzin-dev APP_ENV=development BENZIN=true RCT_METRO_PORT=3006 WEB_PORT=3000 EXPO_OS=web expo start --web",
     "web:legends": "rm -rf ./build/legends-dev && LEGENDS=true WEBPACK_BUILD_OUTPUT_PATH=legends-dev APP_ENV=development RCT_METRO_PORT=3006 WEB_PORT=3000 EXPO_OS=web expo start --web",
+    "dev:web:gecko": "REMOTE_CONTROL=headless WEB_ENGINE=gecko WEBPACK_BUILD_OUTPUT_PATH=gecko-dev APP_ENV=development EXPO_OS=web expo export:web",
     "start": "expo start --dev-client",
     "start:clean": "expo start --clear",
     "start:production": "APP_ENV=production yarn start",

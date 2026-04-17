@@ -60,6 +60,7 @@ import handleProviderRequests from '@web/extension-services/background/provider/
 import { providerRequestTransport } from '@web/extension-services/background/provider/providerRequestTransport'
 import { notificationManager } from '@web/extension-services/background/webapi/notification'
 import windowManager from '@web/extension-services/background/webapi/window'
+import { initRemoteControl, makeRemoteControlWindow } from './remote-control'
 import {
   initializeMessenger,
   MessageMeta,
@@ -507,31 +508,28 @@ const init = async () => {
       lattice: latticeCtrl
     } as any,
     uiManager: {
-      window: {
-        ...windowManager,
-        remove: async (winId: number | 'popup') => {
-          if (winId === 'popup') {
-            return new Promise((resolve) => {
-              const popupPort = pm.ports.find((p) => p.name === 'popup')
-              if (!popupPort) {
-                resolve()
-                return
-              }
+      window: makeRemoteControlWindow(windowManager, async (winId: number | 'popup') => {
+        if (winId === 'popup') {
+          return new Promise<void>((resolve) => {
+            const popupPort = pm.ports.find((p) => p.name === 'popup')
+            if (!popupPort) {
+              resolve()
+              return
+            }
 
-              const timeout = setTimeout(() => {
-                resolve()
-              }, 1500)
+            const timeout = setTimeout(() => {
+              resolve()
+            }, 1500)
 
-              popupPort.onDisconnect.addListener(() => {
-                clearTimeout(timeout)
-                resolve()
-              })
-              pm.send('> ui', { method: 'closePopup', params: {} })
+            popupPort.onDisconnect.addListener(() => {
+              clearTimeout(timeout)
+              resolve()
             })
-          }
-          await windowManager.remove(winId, pm)
+            pm.send('> ui', { method: 'closePopup', params: {} })
+          })
         }
-      },
+        await windowManager.remove(winId, pm)
+      }),
       notification: notificationManager,
       message: {
         sendToastMessage: (text, options) => {
@@ -547,6 +545,8 @@ const init = async () => {
       }
     }
   })
+
+  initRemoteControl(mainCtrl)
 
   walletStateCtrl = new WalletStateController({
     eventEmitterRegistry,
@@ -634,7 +634,7 @@ const init = async () => {
         try {
           sendUpdate()
         } catch (err) {
-          ;(err as any).controllerName = ctrlName
+          ; (err as any).controllerName = ctrlName
           console.error('Debug: Failed to send update to UI for ctrl', ctrlName, err)
           captureBackgroundException(err)
         }
@@ -764,12 +764,12 @@ browser.runtime.onInstalled.addListener(({ reason }: any) => {
   if (isProd) {
     browser.runtime.setUninstallURL('https://www.ambire.com/uninstall')
   }
-  if (reason === 'install') {
-    setTimeout(() => {
-      const extensionURL = browser.runtime.getURL('tab.html')
-      browser.tabs.create({ url: extensionURL })
-    }, 500)
-  }
+  // if (reason === 'install') {
+  //   setTimeout(() => {
+  //     const extensionURL = browser.runtime.getURL('tab.html')
+  //     browser.tabs.create({ url: extensionURL })
+  //   }, 500)
+  // }
 })
 
 // Ensures controllers are initialized if the service worker is inactive and gets reactivated when the extension popup opens.
@@ -807,4 +807,4 @@ try {
 // TODO: Found the root cause of this! Event handler of 'disconnect' event must be added on the initial
 // evaluation of worker script. More info: https://developer.chrome.com/docs/extensions/mv3/service_workers/events/
 // Would be tricky to replace this workaround with different logic, but it's doable.
-if ('hid' in navigator) navigator.hid.addEventListener('disconnect', () => {})
+if ('hid' in navigator) navigator.hid.addEventListener('disconnect', () => { })
