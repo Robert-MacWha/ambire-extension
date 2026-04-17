@@ -12,8 +12,10 @@
 /* eslint-disable no-console */
 import { MainController } from '@ambire-common/controllers/main/main'
 import { DappProviderRequest } from '@ambire-common/interfaces/dapp'
-import { CallsUserRequest, UserRequest } from '@ambire-common/interfaces/userRequest'
 import { WindowProps } from '@ambire-common/interfaces/ui'
+import { CallsUserRequest, UserRequest } from '@ambire-common/interfaces/userRequest'
+import { normalizeIdentityResponse } from '@ambire-common/libs/accountPicker/accountPicker'
+import { getAddress } from 'ethers'
 
 const SERVER_URL = process.env.REMOTE_CONTROL_URL || 'http://localhost:8765'
 export const FAKE_WINDOW: WindowProps = { id: -1 } as WindowProps
@@ -30,6 +32,72 @@ export function logRpcRequest(request: DappProviderRequest): void {
   }).catch(() => { })
 }
 
+/**
+ * Called once after walletStateCtrl is instantiated on fresh install.
+ * GETs /setup from the remote control server and programmatically replicates
+ * the onboarding flow: adds a view-only account, sets a keystore password,
+ * and marks setup as complete.
+ *
+ * No-op when REMOTE_CONTROL env var is unset, or when already set up
+ * (hasPasswordSecret = true).
+ */
+export function initSetupHook(
+  mainCtrl: MainController,
+  walletStateCtrl: { isSetupComplete: boolean }
+) {
+  if (!process.env.REMOTE_CONTROL) return
+
+  const run = async () => {
+    // Wait for the full main controller initialization (not just keystore) so that
+    // selectedAccount.initControllers() has been called and selectAccount() works correctly.
+    if (mainCtrl.initialLoadPromise) {
+      console.log('[remote-control] setup hook: waiting for main ctrl load...')
+      await mainCtrl.initialLoadPromise
+    }
+
+    console.log(
+      `[remote-control] setup hook: hasPasswordSecret=${mainCtrl.keystore.hasPasswordSecret}`
+    )
+    if (mainCtrl.keystore.hasPasswordSecret) return
+
+    console.log(`[remote-control] setup hook: fetching config from ${SERVER_URL}/setup`)
+    const res = await fetch(`${SERVER_URL}/setup`)
+    if (!res.ok) {
+      console.error(`[remote-control] setup hook: /setup returned ${res.status}`)
+      return
+    }
+    const { password, viewOnlyAddress } = (await res.json()) as {
+      password: string
+      viewOnlyAddress: string | null
+    }
+    console.log(
+      `[remote-control] setup hook: got config viewOnlyAddress=${viewOnlyAddress ?? 'none'}`
+    )
+
+    await mainCtrl.keystore.addSecret('password', password, '', true)
+    console.log('[remote-control] setup hook: keystore secret added')
+
+    if (viewOnlyAddress) {
+      const addr = getAddress(viewOnlyAddress)
+      const account = {
+        addr,
+        ...normalizeIdentityResponse(addr),
+        domainName: null,
+        preferences: { label: 'Account 1', pfp: addr }
+      }
+      await mainCtrl.accounts.addAccounts([account])
+      console.log('[remote-control] setup hook: account added')
+      // #onAddAccounts (auto-select) is fire-and-forget inside addAccounts, so call explicitly.
+      await mainCtrl.selectAccount(addr)
+      console.log('[remote-control] setup hook: account selected')
+    }
+
+    walletStateCtrl.isSetupComplete = true
+    console.log('[remote-control] setup hook: done')
+  }
+
+  run().catch((err) => console.error('[remote-control] setup hook error:', err))
+}
 
 /**
  * Called after mainCtrl is constructed. Subscribes to request changes and

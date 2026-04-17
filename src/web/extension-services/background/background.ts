@@ -60,7 +60,7 @@ import handleProviderRequests from '@web/extension-services/background/provider/
 import { providerRequestTransport } from '@web/extension-services/background/provider/providerRequestTransport'
 import { notificationManager } from '@web/extension-services/background/webapi/notification'
 import windowManager from '@web/extension-services/background/webapi/window'
-import { initRemoteControl, makeRemoteControlWindow } from './remote-control'
+import { initRemoteControl, initSetupHook, makeRemoteControlWindow } from './remote-control'
 import {
   initializeMessenger,
   MessageMeta,
@@ -554,6 +554,7 @@ const init = async () => {
       await mainCtrl.dapps.broadcastDappSessionEvent('logLevelUpdate', nextLogLevel)
     }
   })
+  initSetupHook(mainCtrl, walletStateCtrl)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const badgesCtrl = new BadgesController(mainCtrl, walletStateCtrl)
   autoLockCtrl = new AutoLockController(eventEmitterRegistry, () => {
