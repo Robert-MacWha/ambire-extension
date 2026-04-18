@@ -2,11 +2,14 @@
 
 Modified version of Ambire Wallet designed to be remote-controllable via a HTTP API, for the purpose of testing and security research.
 
+`extension/src/web/extension-services/background/remote-control.ts`
+
 Included features:
  - Enable remote-control via `REMOTE_CONTROL=headless` or `REMOTE_CONTROL=sidecar` env variable
  - Set controller server URL via `REMOTE_CONTROL_URL` or default to `http://localhost:8765`
  - Log incoming RPC requests with `REMOTE_CONTROL_URL/rpc`
  - Control userRequests with `REMOTE_CONTROL_URL/request`
+ - Control setup with `REMOTE_CONTROL_URL/setup`
 
 ---
 
