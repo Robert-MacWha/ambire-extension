@@ -11,6 +11,11 @@ Included features:
  - Control userRequests with `REMOTE_CONTROL_URL/request`
  - Control setup with `REMOTE_CONTROL_URL/setup`
 
+Instructions:
+ - Run `git submodule update --init --recursive` to initialize the `ambire-common` submodule
+ - Copy `.env.sample` to `.env`
+ - Run `yarn install` and `yarn dev:web:gecko` to build the extension
+
 ---
 
 <div align="center">
